@@ -111,7 +111,14 @@ def main(argv=None) -> int:
             LOG.error("  %s", v["cef_version"])
         return 2
     def vkey(v):
-        return tuple(int(x) for x in v.split("+", 1)[0].split("."))
+        # Leading numeric components only; historical entries use other formats
+        # (e.g. "3.3626.1895.g7001d56").
+        parts = []
+        for x in v.split("+", 1)[0].split("."):
+            if not x.isdigit():
+                break
+            parts.append(int(x))
+        return tuple(parts)
 
     LOG.info("pinned CEF %s is on the '%s' channel", wanted, entry["channel"])
     if entry["channel"] != "stable" and not args.allow_non_stable:
