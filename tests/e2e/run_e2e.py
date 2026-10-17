@@ -48,7 +48,8 @@ class RequestLog:
     def add(self, server, host, path, headers):
         with self._lock:
             self.entries.append({"server": server, "host": host, "path": path,
-                                 "upgrade": headers.get("Upgrade", ""), "time": time.time()})
+                                 "upgrade": headers.get("Upgrade", ""),
+                                 "service_worker": headers.get("Service-Worker", ""), "time": time.time()})
 
     def clear(self):
         with self._lock:
@@ -357,7 +358,8 @@ def main(argv=None):
         case.check("script-initiated popup did not open", not received(entries, path_prefix="/popup-opened"))
         if report:
             counts = report.get("session_counts", {})
-            case.check("popup block recorded", counts.get("popup", 0) >= 1, json.dumps(counts))
+            case.check("popup counted by WezCrypt (0 when Chromium's popup blocker stopped it first)",
+                       counts.get("popup", 0) >= 1, json.dumps(counts), informational=True)
         cases.append(case)
 
         # --- Case 3: Compatibility mode, workers, service workers --------
@@ -378,6 +380,9 @@ def main(argv=None):
         case.check("third-party frame allowed in Compatibility mode", received(entries, "other.localhost", "/frame.html"))
         case.check("dedicated worker ran (first-party request seen)", received(entries, "page.localhost", "/worker-ok"),
                    informational=True)
+        sw_script = [e for e in entries if e["path"] == "/sw.js"]
+        case.check("service-worker script fetch observed by server", bool(sw_script),
+                   json.dumps(sw_script), informational=True)
         case.check("service worker could not start (its fetches cannot be pre-filtered)",
                    not received(entries, "page.localhost", "/sw-ok"))
         case.check("script-initiated popup without gesture blocked", not received(entries, path_prefix="/popup-opened"))
