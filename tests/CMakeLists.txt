@@ -11,6 +11,7 @@ add_executable(aegis_tests
   unit/test_permissions.cc
   unit/test_policy.cc
   unit/test_psl.cc
+  unit/test_request_gate.cc
   unit/test_settings.cc
   unit/test_updates.cc
   unit/test_url_idna.cc

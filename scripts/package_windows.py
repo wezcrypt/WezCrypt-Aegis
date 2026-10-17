@@ -83,6 +83,12 @@ def main(argv=None):
     ap.add_argument("--iscc", type=Path)
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args(argv)
+    # ISCC resolves relative paths against the .iss file's directory, so
+    # every path handed to external tools is made absolute.
+    a.out = a.out.resolve()
+    a.browser_dir = a.browser_dir.resolve()
+    if a.cef_root:
+        a.cef_root = a.cef_root.resolve()
     logging.basicConfig(level=logging.DEBUG if a.verbose else logging.INFO, format="%(levelname)s %(message)s")
 
     a.out.mkdir(parents=True, exist_ok=True)

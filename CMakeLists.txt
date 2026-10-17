@@ -68,6 +68,7 @@ add_library(aegis_core STATIC
   src/filtering/filter_parser.cc
   src/filtering/public_suffix_list.cc
   src/networking/network_policy.cc
+  src/networking/unattributed_request_gate.cc
   src/permissions/permission_policy.cc
   src/privacy/profile.cc
   src/security/engine_switches.cc

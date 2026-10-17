@@ -9,6 +9,9 @@
 
 #include "browser/aegis_context.h"
 #include "browser/scheme_handler.h"
+#include "browser/worker_gate.h"
+#include "include/cef_app.h"
+#include "ui/browser_window.h"
 #include "common/strings.h"
 #include "common/utf8.h"
 #include "include/base/cef_callback.h"
@@ -275,6 +278,13 @@ void AegisRequestContextHandler::OnRequestContextInitialized(
     CefRefPtr<CefRequestContext> request_context) {
   CEF_REQUIRE_UI_THREAD();
   RegisterInternalSchemeHandler(request_context);
+  if (!RegisterUnattributedRequestGate(request_context)) {
+    // Fail closed: a context without the gate must not load web content.
+    LOG(ERROR) << "request gate unavailable; closing all windows";
+    BrowserWindow::CloseAll(true);
+    CefQuitMessageLoop();
+    return;
+  }
   if (auto* ctx = AegisContext::Get()) ctx->ApplyEnginePolicy(request_context);
 }
 

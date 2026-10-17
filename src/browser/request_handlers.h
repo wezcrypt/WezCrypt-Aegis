@@ -1,10 +1,15 @@
 // WezCrypt Aegis - network interception.
 //
-// Every resource request issued by a browser, frame, dedicated/shared worker
-// or service worker reaches AegisResourceRequestHandler::OnBeforeResourceLoad
-// on the network (IO) thread *before* a connection is made. Blocked requests
-// are cancelled there (RV_CANCEL), so no DNS lookup, TCP/TLS connection or
-// HTTP request is made for them by the network stack.
+// Every resource request issued by a browser, frame or dedicated worker
+// reaches AegisResourceRequestHandler::OnBeforeResourceLoad on the network
+// (IO) thread *before* a connection is made. Blocked requests are cancelled
+// there (RV_CANCEL), so no DNS lookup, TCP/TLS connection or HTTP request is
+// made for them by the network stack.
+//
+// Requests that CEF 152 cannot attribute to a browser (service workers and
+// shared workers in processes without a CEF frame) never reach this handler;
+// they are caught by the http/https gate in browser/worker_gate.h, which
+// denies them before any network access.
 //
 // Known interception gaps are documented in docs/SECURITY_ARCHITECTURE.md:
 // WebSocket handshakes, WebRTC, <link rel=preconnect>/DNS prefetch hints
@@ -45,7 +50,7 @@ class AegisResourceRequestHandler : public CefResourceRequestHandler {
   IMPLEMENT_REFCOUNTING(AegisResourceRequestHandler);
 };
 
-// Handles requests that have no browser (service workers, CefURLRequest)
+// Handles requests without a browser whose process hosts a CEF frame
 // and initializes per-context engine policy.
 class AegisRequestContextHandler : public CefRequestContextHandler {
  public:

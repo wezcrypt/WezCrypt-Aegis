@@ -41,6 +41,39 @@ std::optional<ProfilePaths> MakeProfilePaths(const std::filesystem::path& root,
   return p;
 }
 
+std::vector<std::filesystem::path> ServiceWorkerStorageDirs(const ProfilePaths& paths) {
+  // CEF stores the default storage partition directly in cache_path; the
+  // "Default" variants cover Chromium's profile layout.
+  return {paths.engine_cache / "Service Worker", paths.engine_cache / "Default" / "Service Worker",
+          paths.profile_dir / "Default" / "Service Worker"};
+}
+
+ServiceWorkerPurgeResult PurgeServiceWorkerStorage(const ProfilePaths& paths) {
+  ServiceWorkerPurgeResult r;
+  for (const auto& dir : ServiceWorkerStorageDirs(paths)) {
+    std::error_code ec;
+    auto st = std::filesystem::symlink_status(dir, ec);
+    if (ec || st.type() == std::filesystem::file_type::not_found) {
+      if (ec && ec != std::errc::no_such_file_or_directory && r.ok) {
+        r.ok = false;
+        r.error = dir.string() + ": " + ec.message();
+      }
+      continue;
+    }
+    // remove_all() removes a symlink itself without following it.
+    std::filesystem::remove_all(dir, ec);
+    if (ec || std::filesystem::exists(std::filesystem::symlink_status(dir, ec))) {
+      if (r.ok) {
+        r.ok = false;
+        r.error = dir.string() + ": " + (ec ? ec.message() : std::string("could not be removed"));
+      }
+      continue;
+    }
+    ++r.removed;
+  }
+  return r;
+}
+
 std::optional<ClearDataPlan> ParseClearDataPlan(std::string_view spec) {
   ClearDataPlan plan;
   for (std::string_view raw : Split(spec, ',')) {

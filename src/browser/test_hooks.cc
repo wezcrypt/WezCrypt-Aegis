@@ -51,6 +51,7 @@ void WriteTestReport() {
     auto c = static_cast<EventCategory>(i);
     counts[std::string(EventCategoryId(c))] = static_cast<std::int64_t>(ctx->events().SessionCount(c));
   }
+  root["service_worker_dirs_removed"] = static_cast<std::int64_t>(h.service_worker_dirs_removed);
   root["session_counts"] = json::Value(std::move(counts));
   json::Array events;
   for (const auto& e : ctx->events().Recent(500)) {

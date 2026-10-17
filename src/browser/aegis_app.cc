@@ -3,12 +3,12 @@
 #include <windows.h>
 
 #include "browser/aegis_context.h"
-#include "browser/render_hardening.h"
 #include "browser/request_handlers.h"
 #include "browser/sandbox_check.h"
 #include "browser/scheme_handler.h"
 #include "browser/test_hooks.h"
 #include "browser/update_service.h"
+#include "browser/worker_gate.h"
 #include "common/utf8.h"
 #include "include/base/cef_callback.h"
 #include "include/cef_request_context.h"
@@ -20,9 +20,7 @@
 
 namespace aegis {
 
-AegisApp::AegisApp() : browser_process_(false), render_handler_(new RenderHardening()) {}
-
-CefRefPtr<CefRenderProcessHandler> AegisApp::GetRenderProcessHandler() { return render_handler_; }
+AegisApp::AegisApp() : browser_process_(false) {}
 
 AegisApp::AegisApp(ProfilePaths paths, std::filesystem::path assets_dir, SecurityMode startup_mode,
                    std::vector<std::string> startup_urls, bool start_private)
@@ -68,6 +66,17 @@ void AegisApp::OnContextInitialized() {
   auto global = CefRequestContext::GetGlobalContext();
   ctx->SetNormalRequestContext(global);
   RegisterInternalSchemeHandler(nullptr);
+  // Requests without a browser (service workers in CEF 152) bypass resource
+  // request handlers; without the gate they would reach the network
+  // unfiltered, so startup does not continue if it cannot be installed.
+  if (!RegisterUnattributedRequestGate(nullptr)) {
+    ::MessageBoxW(nullptr,
+                  L"WezCrypt Aegis cannot start safely: the network request gate could not be "
+                  L"installed.\n\nReinstall WezCrypt Aegis.",
+                  L"WezCrypt Aegis", MB_OK | MB_ICONERROR);
+    CefQuitMessageLoop();
+    return;
+  }
   ctx->ApplyEnginePolicy(global);
 
   SetFailClosedHandler([](const std::string& reason) {

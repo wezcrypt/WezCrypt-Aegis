@@ -18,6 +18,10 @@ struct TestHooks {
   bool enabled = false;
   int exit_after_seconds = 0;
   std::filesystem::path report_path;
+  // Startup evidence: service-worker storage directories deleted before the
+  // engine opened the profile (-1 = purge skipped because another instance
+  // owns the profile).
+  int service_worker_dirs_removed = 0;
 };
 
 TestHooks& GetTestHooks();

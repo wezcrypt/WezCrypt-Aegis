@@ -136,7 +136,11 @@ PAGES = {
 new Image().src = '/js-executed?inline-c';
 fetch('http://ads.localhost:{PORT}/fetch?c').catch(function(){});
 try { new Worker('/worker.js'); } catch (e) {}
-if (navigator.serviceWorker) navigator.serviceWorker.register('/sw.js').catch(function(){});
+// The Service Worker API stays exposed: blocking must happen in the engine.
+new Image().src = '/sw-api?' + (navigator.serviceWorker ? 'present' : 'absent');
+if (navigator.serviceWorker) navigator.serviceWorker.register('/sw.js').then(
+  function(){ new Image().src = '/sw-register?resolved'; },
+  function(e){ new Image().src = '/sw-register?rejected=' + encodeURIComponent(String(e && e.name)); });
 window.open('/popup-opened?c');
 try { new WebSocket('ws://ads.localhost:{PORT}/ws'); } catch (e) {}
 setTimeout(function(){ new Image().src = '/js-executed?late'; }, 500);
@@ -366,6 +370,13 @@ def main(argv=None):
         case = Case("compatibility_workers_and_redirects")
         shutil.rmtree(data_dir, ignore_errors=True)
         write_settings(data_dir, {"mode": "compatibility"})
+        # Pre-existing service-worker storage (registration database, script
+        # cache, CacheStorage) must be destroyed before the engine starts.
+        seeded_sw = data_dir / "Profiles" / "Default" / "Engine" / "Service Worker"
+        for sub in ("Database", "ScriptCache", "CacheStorage/seed"):
+            (seeded_sw / sub).mkdir(parents=True, exist_ok=True)
+        (seeded_sw / "Database" / "aegis-e2e-seed").write_text("seeded registration\n")
+        (seeded_sw / "CacheStorage" / "seed" / "aegis-e2e-seed").write_text("seeded cache\n")
         log.clear()
         report_path = args.out / "report-compat.json"
         code = run_browser(exe, [f"{base}/test-c.html"], report_path, args.seconds, timeout)
@@ -380,11 +391,29 @@ def main(argv=None):
         case.check("third-party frame allowed in Compatibility mode", received(entries, "other.localhost", "/frame.html"))
         case.check("dedicated worker ran (first-party request seen)", received(entries, "page.localhost", "/worker-ok"),
                    informational=True)
+        case.check("Service Worker API exposed to the page (block is not a JavaScript shim)",
+                   received(entries, "page.localhost", "/sw-api?present"),
+                   json.dumps([e["path"] for e in entries if e["path"].startswith("/sw-api")]))
         sw_script = [e for e in entries if e["path"] == "/sw.js"]
-        case.check("service-worker script fetch observed by server", bool(sw_script),
-                   json.dumps(sw_script), informational=True)
+        case.check("service-worker script never reached the server (denied in the engine)", not sw_script,
+                   json.dumps(sw_script))
+        reg = [e["path"] for e in entries if e["path"].startswith("/sw-register")]
+        case.check("navigator.serviceWorker.register() was rejected", any("rejected" in p for p in reg) and
+                   not any("resolved" in p for p in reg), json.dumps(reg))
         case.check("service worker could not start (its fetches cannot be pre-filtered)",
                    not received(entries, "page.localhost", "/sw-ok"))
+        sw_any = [e["host"] + e["path"] for e in entries if e["path"].startswith(("/sw-ok", "/sw-ad"))]
+        case.check("no service-worker-generated request reached any server", not sw_any, json.dumps(sw_any))
+        if report:
+            sw_events = [e for e in report.get("events", []) if "/sw.js" in e.get("url", "")
+                         and "service worker" in e.get("reason", "")]
+            case.check("service-worker block recorded by the engine", bool(sw_events),
+                       json.dumps(sw_events[:3]))
+            case.check("stored service-worker data deleted before the engine started",
+                       report.get("service_worker_dirs_removed", 0) >= 1,
+                       str(report.get("service_worker_dirs_removed")))
+        seeds = [str(p) for p in seeded_sw.rglob("aegis-e2e-seed")] if seeded_sw.exists() else []
+        case.check("seeded service-worker registration and CacheStorage are gone", not seeds, json.dumps(seeds))
         case.check("script-initiated popup without gesture blocked", not received(entries, path_prefix="/popup-opened"))
         ws = received(entries, "ads.localhost", "/ws")
         case.check("WebSocket handshake to filtered host (documented interception gap)", not ws,

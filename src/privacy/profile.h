@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace aegis {
 
@@ -32,6 +33,23 @@ std::optional<std::string> ValidateProfileName(std::string_view name);
 
 std::optional<ProfilePaths> MakeProfilePaths(const std::filesystem::path& root,
                                              std::string_view name);
+
+// Directories in which Chromium persists service-worker registrations,
+// their script cache and CacheStorage for this profile.
+std::vector<std::filesystem::path> ServiceWorkerStorageDirs(const ProfilePaths& paths);
+
+struct ServiceWorkerPurgeResult {
+  bool ok = true;
+  int removed = 0;      // directories that existed and were deleted
+  std::string error;    // first failure, when !ok
+};
+
+// Deletes all persistent service-worker state before the engine opens the
+// profile, so that no registration made earlier (by another browser build,
+// an older WezCrypt version or a copied profile) can be started. Symbolic
+// links are removed, never followed. Must run while no engine instance uses
+// the profile.
+ServiceWorkerPurgeResult PurgeServiceWorkerStorage(const ProfilePaths& paths);
 
 struct ClearDataPlan {
   bool cookies_and_site_data = false;  // cookies, local storage, IndexedDB, service workers

@@ -6,6 +6,7 @@
 #include "browser/aegis_context.h"
 #include "common/strings.h"
 #include "common/utf8.h"
+#include "networking/unattributed_request_gate.h"
 #include "include/base/cef_callback.h"
 #include "include/cef_request_context.h"
 #include "include/cef_urlrequest.h"
@@ -18,11 +19,12 @@ namespace {
 
 class CappedFetchClient : public CefURLRequestClient {
  public:
-  CappedFetchClient(std::size_t max_bytes, FetchCallback done)
-      : max_bytes_(max_bytes), done_(std::move(done)) {}
+  CappedFetchClient(std::string url, std::size_t max_bytes, FetchCallback done)
+      : url_(std::move(url)), max_bytes_(max_bytes), done_(std::move(done)) {}
 
   void OnRequestComplete(CefRefPtr<CefURLRequest> request) override {
     CEF_REQUIRE_UI_THREAD();
+    GetInternalFetchRegistry().Release(url_);
     if (!done_) return;
     auto status = request->GetRequestStatus();
     auto response = request->GetResponse();
@@ -57,6 +59,7 @@ class CappedFetchClient : public CefURLRequestClient {
   }
 
  private:
+  const std::string url_;
   const std::size_t max_bytes_;
   FetchCallback done_;
   std::string body_;
@@ -101,11 +104,18 @@ void FetchHttps(const std::string& url, std::size_t max_bytes, FetchCallback don
     done(false, 0, {}, "refusing non-HTTPS update URL");
     return;
   }
+  // CefURLRequest has no browser, so the unattributed-request gate denies it
+  // unless this exact URL is reserved first. Redirects are not followed
+  // past the gate (UR_FLAG_STOP_ON_REDIRECT makes them a hard failure).
+  if (!GetInternalFetchRegistry().Reserve(url)) {
+    done(false, 0, {}, "another download of this URL is already in progress");
+    return;
+  }
   CefRefPtr<CefRequest> request = CefRequest::Create();
   request->SetURL(url);
   request->SetMethod("GET");
-  request->SetFlags(UR_FLAG_SKIP_CACHE);
-  CefURLRequest::Create(request, new CappedFetchClient(max_bytes, std::move(done)),
+  request->SetFlags(UR_FLAG_SKIP_CACHE | UR_FLAG_STOP_ON_REDIRECT);
+  CefURLRequest::Create(request, new CappedFetchClient(url, max_bytes, std::move(done)),
                         CefRequestContext::GetGlobalContext());
 }
 

@@ -42,6 +42,7 @@ jobs:
             -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread
           cmake --build build-tsan --target aegis_tests
           TSAN_OPTIONS=halt_on_error=1 ./build-tsan/tests/aegis_tests --filter=Concurrency
+          TSAN_OPTIONS=halt_on_error=1 ./build-tsan/tests/aegis_tests --filter=RequestGate
       - name: Release signing round trip
         run: python3 tests/release/signing_roundtrip.py build/aegis_tool
       - name: Filter list statistics

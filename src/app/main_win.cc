@@ -16,6 +16,9 @@
 #include <windows.h>
 #include <shlobj.h>
 
+#include <cstdint>
+#include <cwchar>
+#include <cwctype>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -69,6 +72,24 @@ int FailClosed(const std::wstring& message) {
   return 1;
 }
 
+// Named after the profile directory so that only the first engine instance
+// for a profile performs destructive startup maintenance. Later launches are
+// forwarded to that instance by CEF's process singleton.
+HANDLE AcquireProfileLock(const std::filesystem::path& profile_dir, bool* first_instance) {
+  std::wstring key = profile_dir.wstring();
+  for (auto& c : key) c = static_cast<wchar_t>(::towlower(c));
+  std::uint64_t h = 1469598103934665603ull;  // FNV-1a
+  for (wchar_t c : key) {
+    h ^= static_cast<std::uint64_t>(c);
+    h *= 1099511628211ull;
+  }
+  wchar_t name[64];
+  std::swprintf(name, 64, L"Local\\WezCryptAegis-profile-%016llx", static_cast<unsigned long long>(h));
+  HANDLE m = ::CreateMutexW(nullptr, FALSE, name);
+  *first_instance = m && ::GetLastError() != ERROR_ALREADY_EXISTS;
+  return m;
+}
+
 int RunBrowser(HINSTANCE instance, void* sandbox_info) {
   CefMainArgs main_args(instance);
 
@@ -103,12 +124,32 @@ int RunBrowser(HINSTANCE instance, void* sandbox_info) {
   aegis::storage::EnsureDirectory(paths->profile_dir);
   aegis::storage::EnsureDirectory(paths->logs_dir);
 
-  // "Clear all site data on next start" deletes the engine profile before
-  // Chromium opens it.
-  std::error_code ec;
-  if (std::filesystem::exists(paths->profile_dir / "clear-site-data.pending", ec)) {
-    std::filesystem::remove_all(paths->engine_cache, ec);
-    std::filesystem::remove(paths->profile_dir / "clear-site-data.pending", ec);
+  bool first_instance = false;
+  HANDLE profile_lock = AcquireProfileLock(paths->profile_dir, &first_instance);
+  if (!profile_lock) {
+    return FailClosed(L"WezCrypt Aegis could not lock its profile and will not start.");
+  }
+  int sw_dirs_removed = -1;
+  if (first_instance) {
+    // "Clear all site data on next start" deletes the engine profile before
+    // Chromium opens it.
+    std::error_code ec;
+    if (std::filesystem::exists(paths->profile_dir / "clear-site-data.pending", ec)) {
+      std::filesystem::remove_all(paths->engine_cache, ec);
+      std::filesystem::remove(paths->profile_dir / "clear-site-data.pending", ec);
+    }
+    // Service workers are disabled (their requests cannot be filtered before
+    // they are sent). Persistent registrations, script caches and
+    // CacheStorage are deleted before the engine starts so that nothing
+    // registered earlier can run; startup stops if that is not possible.
+    aegis::ServiceWorkerPurgeResult purge = aegis::PurgeServiceWorkerStorage(*paths);
+    if (!purge.ok) {
+      ::CloseHandle(profile_lock);
+      return FailClosed(L"WezCrypt Aegis could not remove stored service workers from its profile "
+                        L"and will not start:\n\n" + aegis::Utf8ToWide(purge.error) +
+                        L"\n\nClose other programs that may be using the profile folder and try again.");
+    }
+    sw_dirs_removed = purge.removed;
   }
 
   // The startup security mode determines process-wide engine flags.
@@ -135,6 +176,7 @@ int RunBrowser(HINSTANCE instance, void* sandbox_info) {
       hooks.enabled = true;
       hooks.exit_after_seconds = static_cast<int>(secs);
       hooks.report_path = command_line->GetSwitchValue("aegis-test-report").ToWString();
+      hooks.service_worker_dirs_removed = sw_dirs_removed;
     }
   }
 
@@ -157,6 +199,7 @@ int RunBrowser(HINSTANCE instance, void* sandbox_info) {
   if (!CefInitialize(main_args, settings, app.get(), sandbox_info)) {
     // Includes the process-singleton case where an existing instance was
     // asked to open a new window.
+    ::CloseHandle(profile_lock);
     return CefGetExitCode();
   }
   aegis::SetSandboxRequested(true);
@@ -164,6 +207,7 @@ int RunBrowser(HINSTANCE instance, void* sandbox_info) {
   aegis::WriteTestReport();
   CefShutdown();
   aegis::AegisContext::Destroy();
+  ::CloseHandle(profile_lock);
   return 0;
 }
 
