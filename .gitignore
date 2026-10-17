@@ -8,3 +8,4 @@
 CMakeUserPresets.json
 __pycache__/
 *.pyc
+__pycache__/

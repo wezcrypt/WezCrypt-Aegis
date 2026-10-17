@@ -1,6 +1,6 @@
 // WezCrypt Aegis - web permission policy (deny by default).
 //
-// Bit values mirror cef_permission_request_types_t (CEF 154) so the CEF
+// Bit values mirror cef_permission_request_types_t (CEF 152+) so the CEF
 // layer can pass masks through unchanged; a static_assert in the browser
 // layer verifies the correspondence at compile time.
 #pragma once

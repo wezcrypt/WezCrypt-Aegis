@@ -32,7 +32,7 @@ Two keys may be listed for rotation.
 ## 3. Publishing a release
 ```
 python scripts/sign_manifest.py create --version 1.0.1 --sequence <previous+1> \
-   --chromium 154.0.8037.98 --min-chromium 154.0.8037.98 \
+   --chromium 152.0.7977.167 --min-chromium 152.0.7977.167 \
    --artifact WezCryptAegis-1.0.1-win-x64-setup.exe=https://<host>/WezCryptAegis-1.0.1-win-x64-setup.exe=dist/WezCryptAegis-1.0.1-win-x64-setup.exe \
    --out manifest.json
 python scripts/sign_manifest.py sign --private release-key.pem --manifest manifest.json

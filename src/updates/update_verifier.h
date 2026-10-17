@@ -24,7 +24,7 @@
 
 namespace aegis {
 
-// Dotted numeric versions ("154.0.8037.98"). Missing components count as 0.
+// Dotted numeric versions ("152.0.7977.167"). Missing components count as 0.
 struct Version {
   std::vector<std::uint32_t> parts;
   static std::optional<Version> Parse(std::string_view s);

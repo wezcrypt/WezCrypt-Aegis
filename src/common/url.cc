@@ -334,8 +334,13 @@ bool IsLocalOrPrivateHost(const Url& url) {
   const std::string h = NormalizeHostForMatching(url.host);
   if (h == "localhost" || EndsWith(h, ".localhost")) return true;
   if (url.host_type == HostType::kIPv4) {
-    unsigned a = 0, b = 0, c = 0, d = 0;
-    if (std::sscanf(h.c_str(), "%u.%u.%u.%u", &a, &b, &c, &d) != 4) return false;
+    auto parts = Split(h, '.');
+    if (parts.size() != 4) return false;
+    std::uint64_t oct[4];
+    for (std::size_t i = 0; i < 4; ++i) {
+      if (!ParseUint64(parts[i], &oct[i]) || oct[i] > 255) return false;
+    }
+    const std::uint64_t a = oct[0], b = oct[1];
     if (a == 127 || a == 10 || a == 0) return true;
     if (a == 172 && b >= 16 && b <= 31) return true;
     if (a == 192 && b == 168) return true;

@@ -1,7 +1,8 @@
 {
   "comment": "Pinned Chromium Embedded Framework distribution used for WezCrypt Aegis builds. Update together with docs/RELEASE_PROCESS.md when moving to a newer security-patched CEF release.",
-  "cef_version": "154.0.34+g14c5a08+chromium-154.0.8037.98",
+  "cef_version": "152.0.14+g8a0b5b9+chromium-152.0.7977.167",
   "platform": "windows64",
   "distribution": "minimal",
-  "sha256": ""
+  "sha256": "",
+  "channel": "stable"
 }

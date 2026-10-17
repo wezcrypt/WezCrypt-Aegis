@@ -9,7 +9,7 @@
 ```
 python scripts/fetch_cef.py --out third_party/cef
 ```
-Downloads `cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal` from the
+Downloads `cef_binary_152.0.14+g8a0b5b9+chromium-152.0.7977.167_windows64_minimal` from the
 official CEF build server, verifies the SHA-1 from the build index (and the SHA-256 when pinned in
 `third_party/cef.json`), rejects archives containing links or path traversal, and confirms that
 `bootstrap.exe` (CEF M138+ sandbox host) is present. `--list` shows current stable versions.
@@ -17,7 +17,7 @@ official CEF build server, verifies the SHA-1 from the build index (and the SHA-
 ## 2. Configure and build
 ```
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 ^
-      -DAEGIS_BUILD_BROWSER=ON -DCEF_ROOT=third_party/cef/cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal
+      -DAEGIS_BUILD_BROWSER=ON -DCEF_ROOT=third_party/cef/cef_binary_152.0.14+g8a0b5b9+chromium-152.0.7977.167_windows64_minimal
 cmake --build build --config Release --parallel
 ```
 Output: `build\src\app\Release\` containing `WezCryptAegis.exe` (CEF bootstrap),

@@ -1,11 +1,11 @@
 # WezCrypt Aegis — Security Architecture
 
 ## Engine choice
-* **Chromium Embedded Framework 154.0.34** (Chromium 154.0.8037.98), pinned in
+* **Chromium Embedded Framework 152.0.14** (stable channel) (Chromium 152.0.7977.167), pinned in
   `third_party/cef.json`, downloaded from the official CEF build index with SHA-1 (index) and
   optional pinned SHA-256 verification (`scripts/fetch_cef.py`). The script warns when a newer
   stable CEF exists.
-* CEF API version: `CEF_API_VERSION_LAST` (15400), selected automatically by CEF's CMake for
+* CEF API version: `CEF_API_VERSION_LAST` (15200), selected automatically by CEF's CMake for
   sandboxed Windows builds.
 * Browsers use the **Alloy runtime style** inside a CEF Views window so that every UI surface
   (tabs, prompts, downloads, popups) is WezCrypt's own code and every engine callback is handled

@@ -87,6 +87,7 @@ def main(argv=None) -> int:
     p.add_argument("--out", type=Path, default=ROOT / "third_party" / "cef")
     p.add_argument("--list", action="store_true", help="list stable versions and exit")
     p.add_argument("--github-output", type=Path, help="append cef_root=<path> to this file")
+    p.add_argument("--allow-non-stable", action="store_true", help="permit beta/dev CEF builds (testing only)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s")
@@ -109,8 +110,16 @@ def main(argv=None) -> int:
         for v in [v for v in versions if v["channel"] == "stable"][:5]:
             LOG.error("  %s", v["cef_version"])
         return 2
-    newest_stable = next((v for v in versions if v["channel"] == "stable"), None)
-    if newest_stable and newest_stable["cef_version"] != wanted:
+    def vkey(v):
+        return tuple(int(x) for x in v.split("+", 1)[0].split("."))
+
+    LOG.info("pinned CEF %s is on the '%s' channel", wanted, entry["channel"])
+    if entry["channel"] != "stable" and not args.allow_non_stable:
+        LOG.error("pinned CEF is not a stable release; use --allow-non-stable for testing only")
+        return 2
+    stable = [v for v in versions if v["channel"] == "stable"]
+    newest_stable = max(stable, key=lambda v: vkey(v["cef_version"])) if stable else None
+    if newest_stable and vkey(newest_stable["cef_version"]) > vkey(wanted):
         LOG.warning("A newer stable CEF is available: %s (pinned %s). Update third_party/cef.json "
                     "to ship current Chromium security fixes.", newest_stable["cef_version"], wanted)
 
