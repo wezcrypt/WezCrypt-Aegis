@@ -42,6 +42,7 @@ set(AEGIS_BROWSER_SRCS
   ../browser/aegis_app.cc
   ../browser/aegis_context.cc
   ../browser/client_handler.cc
+  ../browser/render_hardening.cc
   ../browser/request_handlers.cc
   ../browser/sandbox_check.cc
   ../browser/sandbox_verifier_win.cc

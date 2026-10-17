@@ -79,8 +79,9 @@ void* ClientHandler::OwnerWindow() { return host_ ? host_->NativeWindowHandle() 
 bool ClientHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame>,
                                              CefProcessId source_process,
                                              CefRefPtr<CefProcessMessage> message) {
-  // WezCrypt Aegis installs no renderer-side bindings, so no renderer has a
-  // legitimate reason to message the browser process. Messages are dropped
+  // WezCrypt Aegis installs no renderer-side bindings (its only renderer code
+  // removes Web APIs), so no renderer has a legitimate reason to message the
+  // browser process. Messages are dropped
   // and logged: a compromised renderer gains no privileged entry point.
   LOG(WARNING) << "dropped unexpected process message '" << message->GetName().ToString()
                << "' from process " << source_process << " (browser "

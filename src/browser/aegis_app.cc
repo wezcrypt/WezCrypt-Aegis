@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "browser/aegis_context.h"
+#include "browser/render_hardening.h"
 #include "browser/request_handlers.h"
 #include "browser/sandbox_check.h"
 #include "browser/scheme_handler.h"
@@ -19,7 +20,9 @@
 
 namespace aegis {
 
-AegisApp::AegisApp() : browser_process_(false) {}
+AegisApp::AegisApp() : browser_process_(false), render_handler_(new RenderHardening()) {}
+
+CefRefPtr<CefRenderProcessHandler> AegisApp::GetRenderProcessHandler() { return render_handler_; }
 
 AegisApp::AegisApp(ProfilePaths paths, std::filesystem::path assets_dir, SecurityMode startup_mode,
                    std::vector<std::string> startup_urls, bool start_private)

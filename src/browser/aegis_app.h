@@ -25,6 +25,7 @@ class AegisApp : public CefApp, public CefBrowserProcessHandler {
                                      CefRefPtr<CefCommandLine> command_line) override;
   void OnRegisterCustomSchemes(CefRawPtr<CefSchemeRegistrar> registrar) override;
   CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override { return this; }
+  CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override;
 
   // CefBrowserProcessHandler
   void OnContextInitialized() override;
@@ -40,6 +41,7 @@ class AegisApp : public CefApp, public CefBrowserProcessHandler {
   std::vector<std::string> startup_urls_;
   bool start_private_ = false;
   CefRefPtr<AegisRequestContextHandler> context_handler_;
+  CefRefPtr<CefRenderProcessHandler> render_handler_;
   IMPLEMENT_REFCOUNTING(AegisApp);
 };
 

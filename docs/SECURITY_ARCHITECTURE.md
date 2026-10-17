@@ -111,7 +111,7 @@ the exact frame URL / top-level URL pair.
 ## Known interception gaps (documented, not hidden)
 | Path | Status | Mitigation |
 |---|---|---|
-| Requests made by a running **service worker** | Verified on Windows (CEF 152): not delivered to CEF resource handlers | Service-worker registration is blocked in every mode (the script fetch *is* interceptable), so no service worker can run |
+| **Service workers** (script fetch and every request a worker makes) | Verified on Windows (CEF 152): not delivered to CEF resource handlers, even with `Service-Worker: script` | `navigator.serviceWorker` is removed in every page context before page script runs (`src/browser/render_hardening.cc`), so pages cannot register service workers; the browser-side block on service-worker script requests remains as a second layer |
 | WebSocket handshakes (`ws://`, `wss://`) | Verified on Windows (CEF 152): handshake reaches the server unfiltered | JS disabled in Maximum Isolation; E2E reports the observed behavior on every run |
 | WebRTC / DataChannels | Not intercepted | IP-handling policy; JS disabled in Maximum Isolation |
 | `<link rel=preconnect/dns-prefetch>` | Socket/DNS may be opened without a request | Network-prediction preference disabled; no HTTP request is sent |
@@ -146,6 +146,6 @@ There is **no silent auto-installer**: users download the installer through the 
 download flow; it is verified, never executed by the browser.
 
 ## IPC boundary
-WezCrypt Aegis has no `CefRenderProcessHandler`, no `CefV8Handler`, no message router and no
-JavaScript bindings. Web pages cannot reach any WezCrypt C++ interface. Renderer-originated
+WezCrypt Aegis has no `CefV8Handler`, no message router and no JavaScript bindings. Its only
+renderer-side code (`RenderHardening::OnContextCreated`) *removes* `navigator.serviceWorker`. Web pages cannot reach any WezCrypt C++ interface. Renderer-originated
 process messages are dropped and logged.
