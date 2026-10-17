@@ -154,7 +154,16 @@ RequestDecision EvaluateRequest(const PolicySnapshot& policy, const RequestConte
     return d;
   }
 
-  // 3. Subresources and subframes.
+  // 3. Service workers: their own fetches bypass pre-network filtering.
+  if (req.is_service_worker_script) {
+    auto b = Block(EventCategory::kScript,
+                   "service workers are disabled because their network requests cannot be "
+                   "filtered before they are sent");
+    b.site = d.site;
+    return b;
+  }
+
+  // 4. Subresources and subframes.
   const bool third_party =
       !top || top_host.empty() || (policy.psl ? policy.psl->IsThirdParty(req_host, top_host)
                                               : req_host != top_host);

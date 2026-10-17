@@ -53,9 +53,9 @@ renderer/worker/service worker request
   └─► OnResourceRedirect: every redirect target is re-evaluated; blocked targets are rewritten to
       a non-network internal URL (Chromium refuses web→display-isolated redirects).
 ```
-* Requests without a browser (service workers, shared workers) reach the same handler through
-  `CefRequestContextHandler::GetResourceRequestHandler`; their first party comes from
-  `site_for_cookies`.
+* Dedicated workers' requests reach the same handler (verified by the E2E suite). Requests without
+  a browser reach it through `CefRequestContextHandler::GetResourceRequestHandler`; their first
+  party comes from `site_for_cookies`. Service workers are not allowed to start (see gaps).
 * First/third-party relationships use the **Public Suffix List** (ICANN + private sections).
 * The filter engine is immutable after build and swapped atomically; the IO thread never waits
   for a rebuild.
@@ -111,7 +111,8 @@ the exact frame URL / top-level URL pair.
 ## Known interception gaps (documented, not hidden)
 | Path | Status | Mitigation |
 |---|---|---|
-| WebSocket handshakes (`ws://`, `wss://`) | Not delivered to CEF resource handlers | JS disabled in Maximum Isolation; E2E test reports the observed behavior |
+| Requests made by a running **service worker** | Verified on Windows (CEF 152): not delivered to CEF resource handlers | Service-worker registration is blocked in every mode (the script fetch *is* interceptable), so no service worker can run |
+| WebSocket handshakes (`ws://`, `wss://`) | Verified on Windows (CEF 152): handshake reaches the server unfiltered | JS disabled in Maximum Isolation; E2E reports the observed behavior on every run |
 | WebRTC / DataChannels | Not intercepted | IP-handling policy; JS disabled in Maximum Isolation |
 | `<link rel=preconnect/dns-prefetch>` | Socket/DNS may be opened without a request | Network-prediction preference disabled; no HTTP request is sent |
 | Chromium-internal traffic (component updater: CRLSets etc.) | Not routed through handlers | Intentionally left enabled for certificate revocation updates |

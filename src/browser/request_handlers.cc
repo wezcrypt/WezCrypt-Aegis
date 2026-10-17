@@ -45,6 +45,7 @@ RequestContext BuildContext(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> f
                             std::string* top_storage) {
   RequestContext ctx;
   ctx.type = MapResourceType(request->GetResourceType());
+  ctx.is_service_worker_script = request->GetResourceType() == RT_SERVICE_WORKER;
   ctx.is_main_frame = ctx.type == kResourceDocument;
   *top_storage = ctx.is_main_frame ? url : FirstPartyUrlFor(browser, frame, request);
   ctx.top_level_url = *top_storage;

@@ -286,6 +286,9 @@ def main(argv=None):
     if not exe.exists():
         LOG.error("browser not found: %s", exe)
         return 2
+    args.out = args.out.resolve()
+    args.browser_dir = args.browser_dir.resolve()
+    exe = args.browser_dir / "WezCryptAegis.exe"
     args.out.mkdir(parents=True, exist_ok=True)
     data_dir = args.browser_dir / "Data"
     flag = args.browser_dir / "portable.flag"
@@ -370,13 +373,13 @@ def main(argv=None):
         case.check("JavaScript executes in Compatibility mode (harness positive control)",
                    received(entries, "page.localhost", "/js-executed?inline-c"))
         ads_paths = [e["path"] for e in entries if e["host"] == "ads.localhost" and e["path"] != "/ws"]
-        case.check("ad host never contacted by page, fetch(), iframe, worker or service worker",
+        case.check("ad host never contacted by page, fetch(), iframe or worker",
                    not ads_paths, json.dumps(ads_paths))
         case.check("third-party frame allowed in Compatibility mode", received(entries, "other.localhost", "/frame.html"))
         case.check("dedicated worker ran (first-party request seen)", received(entries, "page.localhost", "/worker-ok"),
                    informational=True)
-        case.check("service worker ran (first-party request seen)", received(entries, "page.localhost", "/sw-ok"),
-                   informational=True)
+        case.check("service worker could not start (its fetches cannot be pre-filtered)",
+                   not received(entries, "page.localhost", "/sw-ok"))
         case.check("script-initiated popup without gesture blocked", not received(entries, path_prefix="/popup-opened"))
         ws = received(entries, "ads.localhost", "/ws")
         case.check("WebSocket handshake to filtered host (documented interception gap)", not ws,

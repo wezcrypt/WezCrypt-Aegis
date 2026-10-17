@@ -56,6 +56,11 @@ struct RequestContext {
   bool is_main_frame = false;            // true for top-level documents
   std::string_view top_level_url;        // empty when unknown
   bool from_internal_page = false;       // initiated by an aegis:// page
+  // Service-worker script fetch (registration or update). Requests issued
+  // later by a running service worker are not delivered to CEF's request
+  // handlers (verified by the Windows E2E suite), so service workers are
+  // not allowed to start at all.
+  bool is_service_worker_script = false;
 };
 
 struct RequestDecision {

@@ -74,7 +74,11 @@ void WriteTestReport() {
     lists.emplace_back(std::move(o));
   }
   root["filter_lists"] = json::Value(std::move(lists));
-  storage::WriteFileAtomically(h.report_path, json::Serialize(json::Value(std::move(root))), false);
+  std::string error;
+  if (!storage::WriteFileAtomically(h.report_path, json::Serialize(json::Value(std::move(root))), false,
+                                    &error)) {
+    LOG(ERROR) << "could not write test report: " << error;
+  }
 }
 
 }  // namespace aegis

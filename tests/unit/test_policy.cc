@@ -193,6 +193,21 @@ TEST(Policy, UnsafeSchemesForSubresources) {
               RequestAction::kBlock);
 }
 
+TEST(Policy, ServiceWorkerScriptsAreBlockedInEveryMode) {
+  for (SecurityMode m : {SecurityMode::kMaximumIsolation, SecurityMode::kStrictProtection,
+                         SecurityMode::kCompatibility}) {
+    auto p = Policy(m);
+    RequestContext c;
+    c.url = "https://app.test/sw.js";
+    c.top_level_url = "https://app.test/";
+    c.type = kResourceScript;
+    c.is_service_worker_script = true;
+    auto d = EvaluateRequest(*p, c);
+    EXPECT_TRUE(d.action == RequestAction::kBlock);
+    EXPECT_TRUE(d.category == EventCategory::kScript);
+  }
+}
+
 TEST(Policy, PopupsRequireGestureAndPassFilters) {
   auto p = Policy(SecurityMode::kStrictProtection, Settings(), "||popads.example^$popup\n");
   PopupContext c;
