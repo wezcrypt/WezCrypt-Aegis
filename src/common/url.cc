@@ -142,9 +142,8 @@ bool IsValidIPv6Literal(std::string_view host) {
       auto parts = Split(v4, '.');
       if (parts.size() != 4) return false;
       for (auto p : parts) {
-        if (p.empty() || p.size() > 3) return false;
-        for (char c : p) if (c < '0' || c > '9') return false;
-        if (std::stoi(std::string(p)) > 255) return false;
+        std::uint64_t octet = 0;
+        if (p.empty() || p.size() > 3 || !ParseUint64(p, &octet) || octet > 255) return false;
       }
       groups += 2;
       i = host.size();

@@ -103,8 +103,8 @@ bool LooksLikeOptions(std::string_view s) {
   if (s.empty()) return false;
   for (char c : s) {
     if (!(IsAsciiAlnum(c) || c == '~' || c == ',' || c == '=' || c == '|' ||
-          c == '.' || c == '*' || c == '_' || c == '-' || c == ':' ||
-          static_cast<unsigned char>(c) >= 0x80)) {
+          c == '.' || c == '*' || c == '_' || c == '-' || c == ':' || c == '[' ||
+          c == ']' || static_cast<unsigned char>(c) >= 0x80)) {
       return false;
     }
   }
@@ -344,7 +344,7 @@ ParsedLine ParseFilterLine(std::string_view raw, std::uint16_t list_id,
   if (!r.right_anchor) {
     while (!pattern.empty() && pattern.back() == '*') pattern.pop_back();
   }
-  if (pattern.find('|') != std::string::npos) return Invalid("unexpected '|'");
+  // A '|' inside the pattern is a literal character in ABP syntax.
   for (char c : pattern) {
     if (static_cast<unsigned char>(c) < 0x21) return Invalid("whitespace in pattern");
   }
@@ -357,9 +357,14 @@ ParsedLine ParseFilterLine(std::string_view raw, std::uint16_t list_id,
 
   bool has_positive_domain = std::any_of(r.domains.begin(), r.domains.end(),
                                          [](const DomainConstraint& d) { return !d.negated; });
-  if (pattern.empty() && !has_positive_domain) {
-    // "$script" or "*$image" alone would affect every site: refused.
-    return Unsupported("match-all rule without domain restriction");
+  // Match-all rules ("*$...") must be narrowed by a site restriction or by
+  // explicit resource types plus a party restriction ("*$ping,third-party").
+  // "$script" or "*$third-party" alone would affect every request: refused.
+  const bool narrowed = has_positive_domain ||
+                        (explicit_types && r.party != PartyRequirement::kAny &&
+                         !(r.types & kResourceDocument));
+  if (pattern.empty() && !narrowed) {
+    return Unsupported("match-all rule without domain or type restriction");
   }
 
   if (!r.match_case) pattern = ToLowerAscii(pattern);

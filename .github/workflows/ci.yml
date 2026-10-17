@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-linux:
+    name: Security core (Linux, GCC + sanitizers)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          python3 -m pip install --user cryptography==44.0.0
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+      - name: Unit, integration and security tests
+        run: ./build/tests/aegis_tests --junit=build/aegis-tests-linux.xml
+      - name: AddressSanitizer + UBSan
+        run: |
+          cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug -DAEGIS_ENABLE_SANITIZERS=ON
+          cmake --build build-asan
+          UBSAN_OPTIONS=halt_on_error=1 ./build-asan/tests/aegis_tests --junit=build-asan/aegis-tests-asan.xml
+      - name: ThreadSanitizer (concurrency suite)
+        run: |
+          cmake -S . -B build-tsan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread
+          cmake --build build-tsan --target aegis_tests
+          TSAN_OPTIONS=halt_on_error=1 ./build-tsan/tests/aegis_tests --filter=Concurrency
+      - name: Release signing round trip
+        run: python3 tests/release/signing_roundtrip.py build/aegis_tool
+      - name: Filter list statistics
+        run: ./build/aegis_tool list-stats assets/filters/*.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-linux
+          path: |
+            build/aegis-tests-linux.xml
+            build-asan/aegis-tests-asan.xml
+
+  windows:
+    name: Windows x64 browser (CEF, sandbox, E2E, packaging)
+    runs-on: windows-2022
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python dependencies
+        run: python -m pip install cryptography==44.0.0 pefile==2024.8.26
+      - name: Fetch and verify CEF
+        id: cef
+        run: python scripts/fetch_cef.py --out third_party/cef --github-output "$env:GITHUB_OUTPUT"
+      - name: Configure
+        run: >
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          -DAEGIS_BUILD_BROWSER=ON -DCEF_ROOT="${{ steps.cef.outputs.cef_root }}"
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Security core tests (Windows)
+        run: build\tests\Release\aegis_tests.exe --junit=build\aegis-tests-windows.xml
+      - name: Verify binary hardening and sandbox bootstrap layout
+        run: >
+          python scripts/verify_build.py --browser-dir build/src/app/Release
+          --cef-root "${{ steps.cef.outputs.cef_root }}" --report build/build-verification.json
+      - name: End-to-end browser security tests
+        run: python tests/e2e/run_e2e.py --browser-dir build/src/app/Release --out e2e-results
+      - name: Fetch rcedit (pinned)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -OutFile rcedit-x64.exe
+          $h = (Get-FileHash rcedit-x64.exe -Algorithm SHA256).Hash.ToLower()
+          if ($h -ne "3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a") { throw "rcedit hash mismatch: $h" }
+      - name: Package (portable zip, installer, SBOM, SHA-256 sums)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $args = @("scripts/package_windows.py", "--browser-dir", "build/src/app/Release",
+                    "--cef-root", "${{ steps.cef.outputs.cef_root }}", "--version", "1.0.0",
+                    "--out", "dist", "--rcedit", "rcedit-x64.exe")
+          if (Test-Path $iscc) { $args += @("--iscc", $iscc) }
+          python @args
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-windows
+          path: |
+            build/aegis-tests-windows.xml
+            build/build-verification.json
+            e2e-results/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WezCryptAegis-1.0.0-win-x64
+          path: |
+            dist/*.zip
+            dist/*-setup.exe
+            dist/*.cdx.json
+            dist/SHA256SUMS.txt
+            dist/package-info.json

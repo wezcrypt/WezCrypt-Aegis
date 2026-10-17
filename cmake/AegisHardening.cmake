@@ -30,8 +30,7 @@ endfunction()
 
 function(aegis_apply_warnings target)
   if(MSVC)
-    target_compile_options(${target} PRIVATE /W4 /w14242 /w14254 /w14263 /w14265 /w14287
-                                             /w14296 /w14311 /w14826 /w14905 /w14906 /w14928)
+    target_compile_options(${target} PRIVATE /W4 /wd4100)
     if(AEGIS_WARNINGS_AS_ERRORS)
       target_compile_options(${target} PRIVATE /WX)
     endif()

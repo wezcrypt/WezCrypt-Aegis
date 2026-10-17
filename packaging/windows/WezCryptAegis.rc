@@ -1,0 +1,36 @@
+// WezCrypt Aegis - version resource for WezCryptAegis.dll.
+#include <winres.h>
+#include "aegis_build_info.h"
+
+#define AEGIS_FILEVERSION AEGIS_VERSION_MAJOR,AEGIS_VERSION_MINOR,AEGIS_VERSION_PATCH,0
+
+IDI_ICON1 ICON "../../assets/branding/aegis.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION AEGIS_FILEVERSION
+ PRODUCTVERSION AEGIS_FILEVERSION
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_DLL
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName", "WezCrypt"
+      VALUE "FileDescription", "WezCrypt Aegis"
+      VALUE "FileVersion", AEGIS_VERSION_STRING
+      VALUE "InternalName", "WezCryptAegis"
+      VALUE "LegalCopyright", "Copyright (C) WezCrypt"
+      VALUE "OriginalFilename", "WezCryptAegis.dll"
+      VALUE "ProductName", "WezCrypt Aegis"
+      VALUE "ProductVersion", AEGIS_VERSION_STRING
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

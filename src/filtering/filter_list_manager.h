@@ -81,6 +81,9 @@ class FilterListManager {
 
   bool SetListEnabled(const std::string& list_id, bool enabled);
 
+  // Records a failed download attempt; the active rules are unaffected.
+  void RecordUpdateFailure(const std::string& list_id, const std::string& error);
+
   std::vector<ListStatus> Status() const;
   std::vector<FilterListConfig> Configs() const;
 

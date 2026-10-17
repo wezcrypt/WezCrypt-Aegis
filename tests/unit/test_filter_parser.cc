@@ -67,12 +67,17 @@ TEST(FilterParser, ParsesOptions) {
 
 TEST(FilterParser, RefusesOverBroadAndMalformedRules) {
   EXPECT_EQ(ParseFilterLine("$script", 0).outcome, ParseOutcome::kUnsupported);
-  EXPECT_EQ(ParseFilterLine("*$image,third-party", 0).outcome, ParseOutcome::kUnsupported);
+  EXPECT_EQ(ParseFilterLine("*$third-party", 0).outcome, ParseOutcome::kUnsupported);
+  EXPECT_EQ(ParseFilterLine("*$ping,third-party", 0).outcome, ParseOutcome::kRule);
   EXPECT_EQ(ParseFilterLine("*$script,domain=example.com", 0).outcome, ParseOutcome::kRule);
   EXPECT_EQ(ParseFilterLine("||a.example^$script,~script", 0).outcome, ParseOutcome::kInvalid);
   EXPECT_EQ(ParseFilterLine("||a.example^$domain=", 0).outcome, ParseOutcome::kInvalid);
-  EXPECT_EQ(ParseFilterLine(std::string(5000, 'a'), 0).outcome, ParseOutcome::kInvalid);
-  EXPECT_EQ(ParseFilterLine("foo|bar", 0).outcome, ParseOutcome::kInvalid);
+  EXPECT_EQ(ParseFilterLine(std::string(70000, 'a'), 0).outcome, ParseOutcome::kInvalid);
+  // '|' inside a pattern is literal.
+  EXPECT_EQ(ParseFilterLine("/adiframe|*|adtech;", 0).outcome, ParseOutcome::kRule);
+  // IPv6 literals in domain options.
+  ParsedLine v6 = ParseFilterLine("||0.0.0.0^$third-party,domain=~127.0.0.1|~[::1]", 0);
+  EXPECT_EQ(v6.outcome, ParseOutcome::kRule);
 }
 
 TEST(FilterParser, HostsFileLines) {

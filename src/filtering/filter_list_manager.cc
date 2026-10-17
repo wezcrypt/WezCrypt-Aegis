@@ -246,6 +246,15 @@ bool FilterListManager::SetListEnabled(const std::string& list_id, bool enabled)
   return false;
 }
 
+void FilterListManager::RecordUpdateFailure(const std::string& list_id, const std::string& error) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  for (std::size_t i = 0; i < configs_.size(); ++i) {
+    if (configs_[i].id != list_id) continue;
+    status_[i].last_attempt_unix_ms = NowUnixMs();
+    status_[i].last_error = "update download failed: " + error;
+  }
+}
+
 std::vector<ListStatus> FilterListManager::Status() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return status_;

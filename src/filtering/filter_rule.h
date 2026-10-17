@@ -49,7 +49,7 @@ enum class ParseOutcome {
 };
 
 struct ParseLimits {
-  std::size_t max_line_bytes = 4096;
+  std::size_t max_line_bytes = 64 * 1024;
   std::size_t max_options = 64;
   std::size_t max_domains = 1024;
 };

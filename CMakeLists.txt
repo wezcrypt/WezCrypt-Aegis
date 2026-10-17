@@ -24,7 +24,14 @@ endif()
 option(AEGIS_BUILD_TESTS "Build the security-core test suites" ON)
 option(AEGIS_BUILD_BROWSER "Build the Windows CEF browser (requires CEF_ROOT)" ${_aegis_browser_default})
 option(AEGIS_ENABLE_SANITIZERS "Build tests with ASan/UBSan (GCC/Clang)" OFF)
-option(AEGIS_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
+if(MSVC)
+  # CEF requires the static runtime; every linked target must match.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  set(_aegis_werror_default OFF)
+else()
+  set(_aegis_werror_default ON)
+endif()
+option(AEGIS_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ${_aegis_werror_default})
 set(AEGIS_UPDATE_PUBLIC_KEYS "" CACHE STRING
     "Comma-separated Ed25519 public keys (base64 or hex) trusted for release manifests")
 set(AEGIS_UPDATE_MANIFEST_URL "" CACHE STRING
@@ -93,3 +100,9 @@ if(AEGIS_BUILD_BROWSER)
   endif()
   add_subdirectory(src/app)
 endif()
+
+# Release / diagnostics tool built on the same core.
+add_executable(aegis_tool tools/aegis_tool.cc)
+target_link_libraries(aegis_tool PRIVATE aegis_core)
+aegis_apply_hardening(aegis_tool)
+aegis_apply_warnings(aegis_tool)
