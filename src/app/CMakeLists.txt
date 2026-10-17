@@ -12,6 +12,7 @@ if(NOT CEF_ROOT)
     "CEF_ROOT is not set. Run scripts/fetch_cef.py and configure with "
     "-DCEF_ROOT=<path to cef_binary_<version>_windows64_minimal>.")
 endif()
+get_filename_component(CEF_ROOT "${CEF_ROOT}" ABSOLUTE BASE_DIR "${CMAKE_SOURCE_DIR}")
 if(NOT EXISTS "${CEF_ROOT}/cmake/FindCEF.cmake")
   message(FATAL_ERROR "CEF_ROOT does not contain a CEF binary distribution: ${CEF_ROOT}")
 endif()

@@ -119,7 +119,7 @@ def main(argv=None) -> int:
         LOG.error("no '%s' distribution for %s", dist, wanted)
         return 2
 
-    final_dir = args.out / file["name"].removesuffix(".tar.bz2")
+    final_dir = (args.out / file["name"].removesuffix(".tar.bz2")).resolve()
     if (final_dir / "cmake" / "FindCEF.cmake").exists():
         LOG.info("already present: %s", final_dir)
     else:
