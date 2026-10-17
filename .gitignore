@@ -1,0 +1,10 @@
+/build*/
+/out/
+/third_party/cef/
+/dist/
+*.user
+.vs/
+.vscode/
+CMakeUserPresets.json
+__pycache__/
+*.pyc

@@ -1,0 +1,35 @@
+[Adblock Plus 2.0]
+! Title: WezCrypt Aegis Baseline
+! Version: 2026.10.17
+! Description: Small built-in list maintained with WezCrypt Aegis. It covers
+!   in-browser cryptocurrency mining scripts and well-known popunder ad
+!   networks. EasyList and EasyPrivacy provide the bulk of the coverage.
+! License: MIT (WezCrypt)
+!
+! --- In-browser cryptocurrency miners ---
+||coinhive.com^
+||coin-hive.com^
+||authedmine.com^
+||cryptoloot.pro^
+||crypto-loot.com^
+||webminepool.com^
+||jsecoin.com^
+||coinimp.com^
+||minero.cc^
+||monerominer.rocks^
+||coinerra.com^
+||ppoi.org^
+||projectpoi.com^
+||cnhv.co^
+||minr.pw^
+||coinhave.com^
+! --- Popunder / redirect ad networks ---
+||popads.net^
+||popcash.net^
+||propellerads.com^
+||adcash.com^
+||onclickads.net^
+||popmyads.com^
+||clickadu.com^
+||hilltopads.net^
+||exoclick.com^$third-party
