@@ -141,7 +141,7 @@ def main(argv=None) -> int:
             LOG.info("verified sha1=%s sha256=%s", sha1, sha256)
             if final_dir.exists():
                 shutil.rmtree(final_dir)
-            extracted = safe_extract(archive, args.out)
+            extracted = safe_extract(archive, args.out).resolve()
             if extracted != final_dir:
                 extracted.rename(final_dir)
 
